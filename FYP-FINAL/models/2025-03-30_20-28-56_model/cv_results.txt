@@ -1,0 +1,5 @@
+Cross-Validation Results:
+  NRMSE: 0.0592
+  MCAR NRMSE: 0.0497
+  MAR NRMSE: 0.0515
+  MNAR NRMSE: 0.0763
