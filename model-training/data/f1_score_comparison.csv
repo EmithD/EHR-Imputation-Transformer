@@ -1,0 +1,10 @@
+Method,F1 Score
+Our Train-Test Split,0.9904153354632588
+Paper I-NAA,0.4799
+Paper I-GAIN,0.4755
+Paper GAIN,0.4672
+Paper NAA,0.4632
+Paper kNN,0.4567
+Paper MF,0.4553
+Paper Simple,0.4489
+Paper MICE,0.4421

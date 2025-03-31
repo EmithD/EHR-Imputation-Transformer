@@ -1,0 +1,10 @@
+Method,Accuracy,Precision,Recall,F1 Score,Specificity,NPV,ROC AUC,Avg Precision
+Our Train-Test Split,0.9925373134328358,0.9810126582278481,1.0,0.9904153354632588,0.9878542510121457,1.0,0.9942666840799269,0.9850401441587587
+Paper Simple,,,,0.4489,,,,
+Paper kNN,,,,0.4567,,,,
+Paper MICE,,,,0.4421,,,,
+Paper MF,,,,0.4553,,,,
+Paper NAA,,,,0.4632,,,,
+Paper I-NAA,,,,0.4799,,,,
+Paper GAIN,,,,0.4672,,,,
+Paper I-GAIN,,,,0.4755,,,,
