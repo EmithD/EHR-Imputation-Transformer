@@ -81,8 +81,8 @@ export default function Home() {
           </motion.div>
 
           {/* Animated image container with glass effect */}
-          <motion.div
-            initial={{
+          {/* <motion.div */}
+            {/* initial={{
               opacity: 0,
               y: 10,
             }}
@@ -95,17 +95,17 @@ export default function Home() {
               delay: 1.2,
             }}
             className="relative z-10 mt-20 rounded-3xl border border-white/10 bg-white/5 backdrop-blur-lg p-4 shadow-lg"
-          >
-            <div className="w-full overflow-hidden rounded-xl border border-white/20">
+          > */}
+            {/* <div className="w-full overflow-hidden rounded-xl border border-white/20">
               <Image
-                src="https://images.unsplash.com/photo-1496096265110-f83ad7f96608?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
+                src="https://images.unsplash.com/photo-1732008278594-3f3272927445?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
                 alt="Landing page preview"
                 className="aspect-[16/9] h-auto w-full object-cover"
                 height={1000}
                 width={1000}
               />
-            </div>
-          </motion.div>
+            </div> */}
+          {/* </motion.div> */}
         </div>
       </div>
     </HeaderFooter>

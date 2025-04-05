@@ -23,7 +23,7 @@ const HeaderFooter = ({ children }: { children: ReactNode }) => {
           <NavigationMenu className="hidden md:flex mx-auto">
             <NavigationMenuList className="flex space-x-4">
               <NavigationMenuItem>
-                <Link href="/about" className="font-medium text-white hover:text-white/80">
+                <Link href="/" className="font-medium text-white hover:text-white/80">
                   Home
                 </Link>
               </NavigationMenuItem>
@@ -33,8 +33,8 @@ const HeaderFooter = ({ children }: { children: ReactNode }) => {
                 </Link>
               </NavigationMenuItem>
               <NavigationMenuItem>
-                <Link href="/about" className="font-medium text-white hover:text-white/80">
-                  More Info
+                <Link href="/impute" className="font-medium text-white hover:text-white/80">
+                  Start Imputing
                 </Link>
               </NavigationMenuItem>
             </NavigationMenuList>
