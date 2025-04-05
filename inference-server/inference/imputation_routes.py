@@ -2,7 +2,7 @@ from fastapi import APIRouter, UploadFile, File, BackgroundTasks, HTTPException
 from fastapi.responses import FileResponse
 import os
 import uuid
-from controllers.inference_controller import process_csv_file
+from inference.imputation_controller import process_csv_file
 
 router = APIRouter(tags=["Inference"])
 

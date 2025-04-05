@@ -1,6 +1,6 @@
 import os
 import time
-from services.imputation_service import ImputationService
+from inference.imputation_service import ImputationService
 
 imputation_service = ImputationService()
 

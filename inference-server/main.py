@@ -4,7 +4,7 @@ import uvicorn
 import os
 from dotenv import load_dotenv
 
-from routes.inference_routes import router as inference_router
+from inference.imputation_routes import router as inference_router
 
 # Load environment variables
 load_dotenv()
