@@ -1,0 +1,11 @@
+Single Model Cross-Validation Results:
+  NRMSE: 0.0555 ± 0.0111
+  MCAR NRMSE: 0.0455 ± 0.0086
+  MAR NRMSE: 0.0501 ± 0.0081
+  MNAR NRMSE: 0.0709 ± 0.0174
+
+Ensemble Model Cross-Validation Results:
+  NRMSE: 0.0615 ± 0.0069
+  MCAR NRMSE: 0.0505 ± 0.0051
+  MAR NRMSE: 0.0560 ± 0.0064
+  MNAR NRMSE: 0.0782 ± 0.0095
