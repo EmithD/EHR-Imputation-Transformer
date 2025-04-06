@@ -1,0 +1,36 @@
+import { Injectable } from '@nestjs/common';
+import { CreateFileDto } from './dto/create-file.dto';
+import { UpdateFileDto } from './dto/update-file.dto';
+import { FileDocument } from './entities/file.entity';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
+
+@Injectable()
+export class FilesService {
+
+  constructor(@InjectModel('File') private fileModel: Model<FileDocument>) {}
+
+  create(createFileDto: CreateFileDto) {
+
+    const newFile = new this.fileModel(createFileDto);
+    newFile.save();
+
+    return newFile;
+  }
+
+  findAll() {
+    return `This action returns all files`;
+  }
+
+  findOne(id: number) {
+    return `This action returns a #${id} file`;
+  }
+
+  update(id: number, updateFileDto: UpdateFileDto) {
+    return `This action updates a #${id} file`;
+  }
+
+  remove(id: number) {
+    return `This action removes a #${id} file`;
+  }
+}

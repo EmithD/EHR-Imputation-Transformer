@@ -2,6 +2,7 @@ import { UserModule } from './schemas/user/user.module';
 import { Module } from '@nestjs/common';
 import { ConfigService, ConfigModule } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
+import { FilesModule } from './schemas/files/files.module';
 
 @Module({
     imports: [
@@ -23,6 +24,7 @@ import { MongooseModule } from '@nestjs/mongoose';
             },
         }),
         UserModule,
+        FilesModule,
     ],
     exports: [
         MongooseModule,

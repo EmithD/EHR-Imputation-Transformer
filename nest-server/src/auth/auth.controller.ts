@@ -25,14 +25,14 @@ export class AuthController {
                 throw new Error('Invalid state parameter');
             }
 
-            await this.authService.validateGoogleUser(code);
+            const newUser = await this.authService.validateGoogleUser(code);
 
-            return res.redirect("http://localhost:3001/");
+            return res.redirect(`http://localhost:3001/?user=${newUser._id}`);
 
             
         } catch (error) {
             console.error('Google OAuth Callback Error:', error);
-            res.redirect("http://localhost:3001/google/fail")
+            res.redirect("http://localhost:3001/auth/google/fail")
         }
     }
 

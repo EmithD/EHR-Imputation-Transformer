@@ -1,23 +1,22 @@
 "use client";
 
-import HeaderFooter from '@/components/header_footer';
 import React, { useState, useRef, ChangeEvent, MouseEvent } from 'react';
 import { motion } from 'framer-motion';
 import { Upload, FileSpreadsheet, CheckCircle, AlertCircle, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import axios, { AxiosProgressEvent } from 'axios';
+import AdminSideBar from '@/components/admin_sidebar';
 
-// Set your FastAPI base URL here
-const FASTAPI_BASE_URL = 'http://localhost:8000'; // Change this to your actual FastAPI URL
+const FASTAPI_BASE_URL = 'http://localhost:8000';
 
 const Impute = () => {
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState<boolean>(false);
-  const [uploadStatus, setUploadStatus] = useState<string | null>(null); // 'success', 'error', or null
+  const [uploadStatus, setUploadStatus] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState<number>(0);
   const [jobId, setJobId] = useState<string | null>(null);
-  const [jobStatus, setJobStatus] = useState<string | null>(null); // 'processing', 'completed', 'failed'
+  const [jobStatus, setJobStatus] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -39,29 +38,32 @@ const Impute = () => {
     setUploadProgress(0);
 
     try {
-      // Create FormData with the file
       const formData = new FormData();
       formData.append('file', file);
       
-      // Upload directly to FastAPI endpoint
       const response = await axios.post(`${FASTAPI_BASE_URL}/api/v1/impute/`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
-        withCredentials: true, // Include cookies if needed for authentication
+        withCredentials: true,
         onUploadProgress: (progressEvent: AxiosProgressEvent) => {
           const percentCompleted = Math.round((progressEvent.loaded * 100) / (progressEvent.total || 1));
           setUploadProgress(percentCompleted);
         },
       });
       
-      // Handle successful response
       if (response.data && response.data.job_id) {
         setJobId(response.data.job_id);
         setJobStatus(response.data.status);
         setUploadStatus('success');
         
-        // Start polling for job status
+        // const fileRes = await fetch(`http:localhost:3000/api/v1/file`, {
+        //   method: 'POST',
+        //   body: {
+        //     ""
+        //   }
+        // });
+
         if (response.data.status === 'processing') {
           pollJobStatus(response.data.job_id);
         }
@@ -79,15 +81,14 @@ const Impute = () => {
   const pollJobStatus = async (id: string) => {
     try {
       const response = await axios.get(`${FASTAPI_BASE_URL}/api/v1/impute/${id}/status/`, {
-        withCredentials: true, // Include cookies if needed for authentication
+        withCredentials: true,
       });
       
       const newStatus = response.data.status;
       setJobStatus(newStatus);
-      
-      // If still processing, poll again after a delay
+
       if (newStatus === 'processing') {
-        setTimeout(() => pollJobStatus(id), 5000); // Poll every 5 seconds
+        setTimeout(() => pollJobStatus(id), 5000);
       }
     } catch (error) {
       console.error('Error checking job status:', error);
@@ -97,8 +98,7 @@ const Impute = () => {
 
   const downloadResults = () => {
     if (!jobId) return;
-    
-    // Open a new window/tab to download the file
+
     window.open(`${FASTAPI_BASE_URL}/api/v1/impute/${jobId}/download`, '_blank');
   };
 
@@ -109,9 +109,9 @@ const Impute = () => {
   };
 
   return (
-    <HeaderFooter>
+    <AdminSideBar>
       <div className="relative mx-auto my-10 flex max-w-4xl flex-col items-center justify-center px-4 py-10 md:py-20">
-        {/* Decorative elements */}
+
         <div className="absolute left-0 top-1/4 h-20 w-20 rounded-full bg-purple-600/20 blur-3xl" />
         <div className="absolute right-0 bottom-1/4 h-20 w-20 rounded-full bg-purple-600/20 blur-3xl" />
         
@@ -302,7 +302,7 @@ const Impute = () => {
           ))}
         </motion.div>
       </div>
-    </HeaderFooter>
+    </AdminSideBar>
   );
 };
 

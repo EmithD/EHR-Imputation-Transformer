@@ -57,12 +57,11 @@ async def impute_data(
             os.remove(file_path)
         raise HTTPException(status_code=500, detail=f"Error processing file: {str(e)}")
 
-@router.get("/impute/{job_id}/status")
+@router.get("/impute/{job_id}/status/")
 async def check_imputation_status(job_id: str):
     """
     Check the status of an imputation job.
     """
-    # Look for result file to see if job is done
     result_file = None
     for filename in os.listdir(RESULTS_DIR):
         if filename.startswith(f"{job_id}_imputed_"):
@@ -75,8 +74,7 @@ async def check_imputation_status(job_id: str):
             "status": "completed",
             "result_file": result_file
         }
-    
-    # Check if job is still in progress (input file exists)
+        
     input_file = None
     for filename in os.listdir(UPLOAD_DIR):
         if filename.startswith(f"{job_id}_"):
@@ -88,8 +86,7 @@ async def check_imputation_status(job_id: str):
             "job_id": job_id,
             "status": "processing"
         }
-    
-    # If neither input nor output file exists, the job does not exist
+        
     raise HTTPException(status_code=404, detail=f"Job {job_id} not found")
 
 @router.get("/impute/{job_id}/download")
@@ -109,7 +106,6 @@ async def download_imputed_data(job_id: str):
     
     file_path = os.path.join(RESULTS_DIR, result_file)
     
-    # Return the file for download
     return FileResponse(
         path=file_path,
         filename=result_file.replace(f"{job_id}_imputed_", ""),
@@ -123,14 +119,12 @@ async def delete_job_files(job_id: str):
     """
     deleted_files = []
     
-    # Delete input file if it exists
     for filename in os.listdir(UPLOAD_DIR):
         if filename.startswith(f"{job_id}_"):
             file_path = os.path.join(UPLOAD_DIR, filename)
             os.remove(file_path)
             deleted_files.append(filename)
-    
-    # Delete output file if it exists
+            
     for filename in os.listdir(RESULTS_DIR):
         if filename.startswith(f"{job_id}_imputed_"):
             file_path = os.path.join(RESULTS_DIR, filename)
