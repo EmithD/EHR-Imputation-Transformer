@@ -10,12 +10,26 @@ export class FilesService {
 
   constructor(@InjectModel('File') private fileModel: Model<FileDocument>) {}
 
-  create(createFileDto: CreateFileDto) {
+  async create(createFileDto: CreateFileDto) {
 
-    const newFile = new this.fileModel(createFileDto);
-    newFile.save();
+    try {
+      const newFile = await new this.fileModel(createFileDto);
+      await newFile.save();
+      return newFile;
+    } catch (error) {
+      return error;
+    }
 
-    return newFile;
+  }
+
+  async findByUser() {
+
+    try {
+
+    } catch (error) {
+      
+    }
+
   }
 
   findAll() {

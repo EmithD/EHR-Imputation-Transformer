@@ -3,6 +3,7 @@ import { OAuth2Client } from 'google-auth-library';
 import { UserService } from 'src/mongodb/schemas/user/user.service';
 import { google } from 'googleapis';
 import { CreateUserDto } from 'src/mongodb/schemas/user/dto/create-user.dto';
+import { EncryptionUtil } from 'common/utils/encryption.util';
 
 @Injectable()
 export class AuthService {
@@ -49,7 +50,6 @@ export class AuthService {
             });
             
             const userInfo = await oauth2.userinfo.get();
-            console.log(userInfo.data.email);
 
             const newUser = await this.createOrUpdateGoogleUser(userInfo, tokens);
 
@@ -65,7 +65,6 @@ export class AuthService {
         try {
             
             const user = await this.userService.findOneUser(userInfo.data.email);
-            console.log(user);
 
             if (!user) {
                 const newUser = new CreateUserDto();
@@ -74,12 +73,10 @@ export class AuthService {
                 newUser.googleAvatarUrl = userInfo.data.picture,
                 newUser.googleAccessToken = tokens.access_token,
                 newUser.googleRefreshToken = tokens.refresh_token
-                console.log(newUser);
                 return await this.userService.create(newUser);
             } else {
 
                 const user = await this.userService.findOneUser(userInfo.data.email);
-                console.log(user);
                 const updatedUser = await this.userService.update(
                     user?.id,
                     {
@@ -99,18 +96,43 @@ export class AuthService {
 
     }
 
-    async isUserAuthenticated(email: string) {
+    async isUserAuthenticated(token: string): Promise<boolean | any> {
+        try {
 
-        const user = await this.userService.findOneUser(email);
-        console.log(user);
+            const decrypt = EncryptionUtil.decrypt(token)
 
-        if (!user) {
+            this.oAuth2Client.setCredentials({
+                access_token: decrypt
+            })
+            
+            const userInfoClient = await google.oauth2({
+                auth: this.oAuth2Client,
+                version: 'v2'
+            });
+
+            const userInfo = await userInfoClient.userinfo.get();
+
+            if (userInfo.data && userInfo.data.id) {
+                // Find the user in the database to make sure they exist
+                const user = await this.userService.findOneUser(userInfo.data.email);
+                
+                const finalUser = {
+                    "userId": user?._id,
+                    "email": user?.email,
+                    "avatarUrl": user?.googleAvatarUrl,
+                    "displayName": user?.displayName
+                }
+
+                return finalUser;
+            }
+              
             return false;
-        } else {
-            return true;
-        }
 
-    }
+        } catch (error) {
+            console.error(`Authentication verification failed: ${error.message}`, error.stack);
+            return false;
+        }
+      }
 
 
 }

@@ -8,8 +8,8 @@ export class FilesController {
   constructor(private readonly filesService: FilesService) {}
 
   @Post()
-  create(@Body() createFileDto: CreateFileDto) {
-    return this.filesService.create(createFileDto);
+  async create(@Body() createFileDto: CreateFileDto) {
+    return await this.filesService.create(createFileDto);
   }
 
   @Get()

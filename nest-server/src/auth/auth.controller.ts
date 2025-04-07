@@ -1,6 +1,6 @@
-import { Controller, Get, Post, Query, Req, Res } from '@nestjs/common';
+import { Body, Controller, Get, Post, Query, Req, Res } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { Response } from 'express';
+import { Request, Response } from 'express';
 
 @Controller('api/v1/auth')
 export class AuthController {
@@ -27,7 +27,7 @@ export class AuthController {
 
             const newUser = await this.authService.validateGoogleUser(code);
 
-            return res.redirect(`http://localhost:3001/?user=${newUser._id}`);
+            return res.redirect(`http://localhost:3001/admin/?user=${newUser.googleAccessToken}`);
 
             
         } catch (error) {
@@ -36,9 +36,40 @@ export class AuthController {
         }
     }
 
-    // @Post('google/user')
-    // async getValidation(@Req() req: Request) {
-    //     return await this.authService.isUserAuthenticated()
-    // }
+    @Post('google/user')
+    async getValidation(@Body() body: any) {
+        try {
 
+            const { token } = body;
+            
+            if (!token) {
+                return {
+                    isAuthenticated: false,
+                    message: 'No token provided'
+                };
+            }
+
+            const user = await this.authService.isUserAuthenticated(token);
+            
+            // If authenticated, optionally get user data
+            if (user) {
+                return {
+                    isAuthenticated: true,
+                    user: user
+                };
+            }
+            
+            return {
+                isAuthenticated: false,
+                message: 'Invalid or expired token'
+            };
+        } catch (error) {
+            console.error('Authentication error:', error);
+            return {
+                isAuthenticated: false,
+                message: 'Authentication error',
+                error: error.message
+            };
+        }
+    }
 }

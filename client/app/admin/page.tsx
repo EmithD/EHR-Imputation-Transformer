@@ -1,16 +1,19 @@
 "use client";
 
-import React, { useState, useRef, ChangeEvent, MouseEvent } from 'react';
+import React, { useState, useRef, ChangeEvent, MouseEvent, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Upload, FileSpreadsheet, CheckCircle, AlertCircle, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import axios, { AxiosProgressEvent } from 'axios';
-import AdminSideBar from '@/components/admin_sidebar';
+import AdminSideBar, { useUserData } from '@/components/admin_sidebar';
+import { useSearchParams, useRouter } from 'next/navigation';
 
 const FASTAPI_BASE_URL = 'http://localhost:8000';
+const SERVER_BASE_URL = 'http://localhost:3000';
 
 const Impute = () => {
+  const router = useRouter();
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState<boolean>(false);
   const [uploadStatus, setUploadStatus] = useState<string | null>(null);
@@ -18,6 +21,71 @@ const Impute = () => {
   const [jobId, setJobId] = useState<string | null>(null);
   const [jobStatus, setJobStatus] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [userId, setUserId] = useState<string | null>(null);
+
+  const searchParams = useSearchParams();
+  
+  useEffect(() => {
+    const storeQueryParams = () => {
+      if (!searchParams) return;
+      
+      const params: Record<string, string> = {};
+      let hasParams = false;
+
+      for (const [key, value] of searchParams.entries()) {
+        params[key] = value;
+        hasParams = true;
+
+        localStorage.setItem(key, value);
+      }
+
+      if (hasParams) {
+        localStorage.setItem('queryParams', JSON.stringify(params));
+        console.log('Query parameters stored in localStorage:', params);
+        router.push('/admin')
+      }
+    };
+    
+    storeQueryParams();
+  }, [searchParams]);
+
+  useEffect(() => {
+    const isAuthenticated = async () => {
+      try {
+        const queryParamsString = localStorage.getItem('queryParams');
+        
+        if (!queryParamsString) {
+          console.log("No token found in localStorage");
+          router.push('/auth/login')
+          return;
+        }
+
+        const queryParams = JSON.parse(queryParamsString);
+        
+        const res = await fetch(`${SERVER_BASE_URL}/api/v1/auth/google/user`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ token: queryParams.user })
+        });
+
+        const data = await res.json();
+
+        if (data.isAuthenticated) {
+          console.log('User is authenticated');
+          setUserId(data.user.userId);
+        } else {
+          console.log('User is not authenticated');
+          router.push('/auth/login');
+        }
+      } catch (error) {
+        console.error('Authentication check failed:', error);
+      }
+    };
+  
+    isAuthenticated();
+  }, [router]);
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files ? e.target.files[0] : null;
@@ -55,15 +123,20 @@ const Impute = () => {
       if (response.data && response.data.job_id) {
         setJobId(response.data.job_id);
         setJobStatus(response.data.status);
-        setUploadStatus('success');
-        
-        // const fileRes = await fetch(`http:localhost:3000/api/v1/file`, {
-        //   method: 'POST',
-        //   body: {
-        //     ""
-        //   }
-        // });
 
+        await fetch(`${SERVER_BASE_URL}/api/v1/files`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            userId: userId,
+            bEfileId: response.data.job_id,
+            status: response.data.status
+          })
+        });
+
+        setUploadStatus('success');
         if (response.data.status === 'processing') {
           pollJobStatus(response.data.job_id);
         }

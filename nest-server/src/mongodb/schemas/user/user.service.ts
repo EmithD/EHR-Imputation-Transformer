@@ -11,13 +11,13 @@ export class UserService {
 
   constructor(@InjectModel('User') private userModel: Model<UserDocument>) {}
 
-  create(createUserDto: CreateUserDto) {
+  async create(createUserDto: CreateUserDto) {
     
     if (createUserDto.googleAccessToken) createUserDto.googleAccessToken = EncryptionUtil.encrypt(createUserDto.googleAccessToken);
     if (createUserDto.googleRefreshToken) createUserDto.googleRefreshToken = EncryptionUtil.encrypt(createUserDto.googleRefreshToken);
 
     const newUser = new this.userModel(createUserDto);
-    newUser.save()
+    await newUser.save()
 
     return newUser;
   }
@@ -26,10 +26,9 @@ export class UserService {
     return `This action returns all user`;
   }
 
-  async findOneUser(emailP: string) {
+  async findOneUser(emailP: any) {
 
     const user = await this.userModel.findOne({email: emailP});
-    console.log("user:", user)
 
     return user;
   }

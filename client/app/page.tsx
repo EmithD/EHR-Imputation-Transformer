@@ -3,8 +3,11 @@
 import HeaderFooter from "@/components/header_footer";
 import Image from "next/image";
 import { motion } from "framer-motion";
+import { useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 
 export default function Home() {
+
   return (
     <HeaderFooter>
       <div className="relative mx-auto my-10 flex max-w-7xl flex-col items-center justify-center">
