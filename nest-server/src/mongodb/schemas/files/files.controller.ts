@@ -17,18 +17,18 @@ export class FilesController {
     return this.filesService.findAll();
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.filesService.findOne(+id);
+  @Get(':uId')
+  findOne(@Param('uId') uId: string) {
+    return this.filesService.findByUser(uId);
   }
 
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateFileDto: UpdateFileDto) {
-    return this.filesService.update(+id, updateFileDto);
-  }
+  // @Patch(':id')
+  // update(@Param('id') id: string, @Body() updateFileDto: UpdateFileDto) {
+  //   return this.filesService.update(+id, updateFileDto);
+  // }
 
   @Delete(':id')
   remove(@Param('id') id: string) {
-    return this.filesService.remove(+id);
+    return this.filesService.remove(id);
   }
 }

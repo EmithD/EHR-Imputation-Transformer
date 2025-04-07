@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import axios, { AxiosProgressEvent } from 'axios';
 import AdminSideBar, { useUserData } from '@/components/admin_sidebar';
 import { useSearchParams, useRouter } from 'next/navigation';
+import { IsAuth } from './IsAuth';
 
 const FASTAPI_BASE_URL = 'http://localhost:8000';
 const SERVER_BASE_URL = 'http://localhost:3000';
@@ -50,42 +51,22 @@ const Impute = () => {
   }, [searchParams]);
 
   useEffect(() => {
-    const isAuthenticated = async () => {
-      try {
-        const queryParamsString = localStorage.getItem('queryParams');
-        
-        if (!queryParamsString) {
-          console.log("No token found in localStorage");
-          router.push('/auth/login')
-          return;
-        }
-
-        const queryParams = JSON.parse(queryParamsString);
-        
-        const res = await fetch(`${SERVER_BASE_URL}/api/v1/auth/google/user`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ token: queryParams.user })
-        });
-
-        const data = await res.json();
-
-        if (data.isAuthenticated) {
-          console.log('User is authenticated');
-          setUserId(data.user.userId);
-        } else {
-          console.log('User is not authenticated');
-          router.push('/auth/login');
-        }
-      } catch (error) {
-        console.error('Authentication check failed:', error);
+    
+    const checkAuth = async () => {
+      const authInstance = new IsAuth();
+      const result = await authInstance.isAuthenticated();
+      
+      if (result.auth == false) {
+        window.location.href = '/auth/login'
+      } else {
+        setUserId(result.userId);
       }
+
     };
-  
-    isAuthenticated();
-  }, [router]);
+
+    checkAuth();
+
+  }, []);
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files ? e.target.files[0] : null;

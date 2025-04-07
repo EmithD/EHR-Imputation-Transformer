@@ -1,42 +1,93 @@
 'use client';
 
 import AdminSideBar from '@/components/admin_sidebar';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Download, Trash2, FileText, Search, Filter, RefreshCw } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { IsAuth } from '../IsAuth';
 
-// Define file status type
 type FileStatus = 'completed' | 'processing' | 'failed' | 'pending';
 
-// Define upload file type
 interface UploadFile {
-  id: string;
-  fileName: string;
+  _id: string;
+  userId: string;
+  bEfileId: string;
   status: FileStatus;
-  size: string;
-  date: string;
+  dateCreated: string;
+  createdAt: string;
+  updatedAt: string;
+  __v: number;
 }
 
-// Sample data for the table
-const initialUploads: UploadFile[] = [
-  { id: 'FILE-7832', fileName: 'patient_data_2024.xlsx', status: 'completed', size: '4.2 MB', date: '2 hours ago' },
-  { id: 'FILE-6391', fileName: 'hospital_records.csv', status: 'processing', size: '8.7 MB', date: '5 hours ago' },
-  { id: 'FILE-5472', fileName: 'clinical_trials.xlsx', status: 'completed', size: '12.1 MB', date: '1 day ago' },
-  { id: 'FILE-4283', fileName: 'medical_imaging_data.csv', status: 'failed', size: '6.5 MB', date: '2 days ago' },
-  { id: 'FILE-3194', fileName: 'genomic_sequences.xlsx', status: 'completed', size: '15.3 MB', date: '3 days ago' },
-  { id: 'FILE-2057', fileName: 'pharmacy_inventory.csv', status: 'pending', size: '3.8 MB', date: '4 days ago' },
-];
+const FASTAPI_BASE_URL = 'http://localhost:8000';
+const NEST_BASE_URL = 'http://localhost:3000';
 
 const UploadsPage = () => {
-  const [uploads, setUploads] = useState(initialUploads);
+  const [uploads, setUploads] = useState<UploadFile[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [userId, setUserId] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Status badge styling
+  // First check authentication
+  useEffect(() => {
+    const checkAuth = async () => {
+      setIsLoading(true);
+      const authInstance = new IsAuth();
+      const result = await authInstance.isAuthenticated();
+      
+      if (result.auth === false) {
+        window.location.href = '/auth/login';
+        return;
+      } else {
+        console.log("user:", result.userId);
+        setUserId(result.userId);
+        // Only fetch uploads after userId is set
+        fetchUploads(result.userId);
+      }
+      setIsLoading(false);
+    };
+    
+    checkAuth();
+  }, []);
+
+  // Fetch uploads when refreshing
+  const fetchUploads = async (id = userId) => {
+    if (!id) return;
+    
+    setIsLoading(true);
+    try {
+      const uploadsRaw = await fetch(`http://localhost:3000/api/v1/files/${id}`);
+      
+      // Check if response is ok before trying to parse JSON
+      if (!uploadsRaw.ok) {
+        const errorText = await uploadsRaw.text();
+        console.error("API error:", errorText);
+        setUploads([]);
+        setIsLoading(false);
+        return;
+      }
+      
+      const data = await uploadsRaw.json();
+      
+      if (Array.isArray(data)) {
+        setUploads(data);
+      } else {
+        console.error("API did not return an array:", data);
+        setUploads([]);
+      }
+    } catch (error) {
+      console.error("Error fetching uploads:", error);
+      setUploads([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
   const getStatusBadge = (status: FileStatus) => {
     const statusStyles: Record<FileStatus, string> = {
       completed: 'bg-green-500/20 text-green-400 border-green-500/30',
@@ -52,31 +103,47 @@ const UploadsPage = () => {
     );
   };
 
-  // Handle file deletion
-  const handleDelete = (id: string) => {
-    setUploads(uploads.filter(upload => upload.id !== id));
+  const handleDelete = async (beid: string, deid: string) => {
+    if (uploads) {
+      await fetch (`${FASTAPI_BASE_URL}/api/v1/impute/${beid}`, {
+        method: 'DELETE'
+      });
+
+      await fetch (`${NEST_BASE_URL}/api/v1/files/${deid}`, {
+        method: 'DELETE'
+      });
+
+      setUploads(uploads.filter(upload => upload._id !== deid));
+    }
   };
 
-  // Handle file download
   const handleDownload = (id: string) => {
-    // Download logic here
     console.log(`Downloading file ${id}`);
-    // In a real application, this would trigger a download
+    window.open(`${FASTAPI_BASE_URL}/api/v1/impute/${id}/download`, '_blank');
   };
 
-  // Simulate refresh
   const handleRefresh = () => {
     setIsRefreshing(true);
+    fetchUploads(); // Fetch the latest data
     setTimeout(() => {
       setIsRefreshing(false);
     }, 1000);
   };
 
-  // Filter uploads based on search query
-  const filteredUploads = uploads.filter(upload => 
-    upload.fileName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    upload.id.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Calculate filtered uploads with null checks
+  const filteredUploads = uploads.filter(upload => {
+    if (!upload) return false;
+    
+    const fileIdMatch = upload.bEfileId && typeof upload.bEfileId === 'string' 
+      ? upload.bEfileId.toLowerCase().includes(searchQuery.toLowerCase()) 
+      : false;
+      
+    const idMatch = upload._id && typeof upload._id === 'string' 
+      ? upload._id.toLowerCase().includes(searchQuery.toLowerCase()) 
+      : false;
+      
+    return fileIdMatch || idMatch;
+  });
 
   return (
     <AdminSideBar>
@@ -95,6 +162,7 @@ const UploadsPage = () => {
             onClick={handleRefresh} 
             variant="outline" 
             className="border-white/20 bg-white/5 text-white hover:bg-white/10"
+            disabled={isLoading || !userId}
           >
             <RefreshCw size={16} className={`mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
             Refresh
@@ -121,40 +189,42 @@ const UploadsPage = () => {
               <table className="w-full border-collapse">
                 <thead>
                   <tr className="border-b border-white/10">
-                    <th className="py-3 px-4 text-left text-white/70 font-medium text-sm">File ID</th>
-                    <th className="py-3 px-4 text-left text-white/70 font-medium text-sm">File Name</th>
+
+                    <th className="py-3 px-4 text-left text-white/70 font-medium text-sm">File Identifier</th>
                     <th className="py-3 px-4 text-left text-white/70 font-medium text-sm">Status</th>
-                    <th className="py-3 px-4 text-left text-white/70 font-medium text-sm">Size</th>
                     <th className="py-3 px-4 text-left text-white/70 font-medium text-sm">Uploaded</th>
                     <th className="py-3 px-4 text-right text-white/70 font-medium text-sm">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredUploads.length > 0 ? (
+                  {isLoading ? (
+                    <tr>
+                      <td colSpan={6} className="py-8 text-center text-white/60">
+                        Loading...
+                      </td>
+                    </tr>
+                  ) : filteredUploads.length > 0 ? (
                     filteredUploads.map((upload, index) => (
                       <tr 
-                        key={upload.id} 
+                        key={upload._id} 
                         className={`border-b border-white/10 hover:bg-white/5 transition-colors ${
                           index % 2 === 0 ? 'bg-white/[0.02]' : ''
                         }`}
                       >
-                        <td className="py-3 px-4 text-sm font-medium">{upload.id}</td>
                         <td className="py-3 px-4 text-sm">
                           <div className="flex items-center">
-                            <FileText size={16} className="text-purple-400 mr-2" />
-                            {upload.fileName}
+                            {upload.bEfileId}
                           </div>
                         </td>
-                        <td className="py-3 px-4 text-sm">{getStatusBadge(upload.status)}</td>
-                        <td className="py-3 px-4 text-sm text-white/70">{upload.size}</td>
-                        <td className="py-3 px-4 text-sm text-white/70">{upload.date}</td>
+                        <td className="py-3 px-4 text-sm">{getStatusBadge(upload.status as FileStatus)}</td>
+                        <td className="py-3 px-4 text-sm text-white/70">{new Date(upload.dateCreated).toLocaleString()}</td>
                         <td className="py-3 px-4 text-right">
                           <div className="flex items-center justify-end space-x-2">
                             <Button
                               variant="ghost"
                               size="icon"
                               className="h-8 w-8 text-white/70 hover:text-white hover:bg-white/10"
-                              onClick={() => handleDownload(upload.id)}
+                              onClick={() => handleDownload(upload.bEfileId)}
                               disabled={upload.status === 'processing' || upload.status === 'pending'}
                             >
                               <Download size={16} />
@@ -163,7 +233,7 @@ const UploadsPage = () => {
                               variant="ghost"
                               size="icon"
                               className="h-8 w-8 text-white/70 hover:text-red-400 hover:bg-red-500/10"
-                              onClick={() => handleDelete(upload.id)}
+                              onClick={() => handleDelete(upload.bEfileId, upload._id)}
                             >
                               <Trash2 size={16} />
                             </Button>
@@ -182,7 +252,7 @@ const UploadsPage = () => {
               </table>
             </div>
             
-            {uploads.length > 0 && (
+            {filteredUploads.length > 0 && (
               <div className="mt-4 flex justify-between items-center text-sm text-white/60">
                 <div>Showing {filteredUploads.length} of {uploads.length} files</div>
                 <div className="flex items-center">
