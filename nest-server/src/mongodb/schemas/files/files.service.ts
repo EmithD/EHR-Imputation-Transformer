@@ -31,7 +31,6 @@ export class FilesService {
       const files = await this.fileModel.find({ userId: uId }).exec();
 
       for (const file of files) {
-
         const statusResRaw = await fetch(`http://localhost:8000/api/v1/impute/${file.bEfileId}/status/`)
         const statusRes = await statusResRaw.json();
         if(file.status !== statusRes.status) {

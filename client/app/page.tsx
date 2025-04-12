@@ -1,10 +1,7 @@
 "use client";
 
 import HeaderFooter from "@/components/header_footer";
-import Image from "next/image";
 import { motion } from "framer-motion";
-import { useEffect } from "react";
-import { useSearchParams } from "next/navigation";
 
 export default function Home() {
 

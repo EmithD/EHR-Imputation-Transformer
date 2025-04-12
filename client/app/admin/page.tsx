@@ -1,13 +1,11 @@
 "use client";
 
-import React, { useState, useRef, ChangeEvent, MouseEvent, useEffect } from 'react';
+import React, { useState, useRef, ChangeEvent, MouseEvent } from 'react';
 import { motion } from 'framer-motion';
 import { Upload, FileSpreadsheet, CheckCircle, AlertCircle, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import axios, { AxiosProgressEvent } from 'axios';
-import AdminSideBar from '@/components/admin_sidebar';
-import { useSearchParams, useRouter } from 'next/navigation';
 import { useUser } from '../context/UserContext';
 
 const FASTAPI_BASE_URL = 'http://localhost:8000';
@@ -21,7 +19,7 @@ const Impute = () => {
   const [jobId, setJobId] = useState<string | null>(null);
   const [jobStatus, setJobStatus] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { user, setUser } = useUser();
+  const { user } = useUser();
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files ? e.target.files[0] : null;
@@ -120,8 +118,8 @@ const Impute = () => {
 
     <div className="relative mx-auto my-10 flex max-w-4xl flex-col items-center justify-center px-4 py-10 md:py-20">
 
-      <div className="absolute left-0 top-1/4 h-20 w-20 rounded-full bg-purple-600/20 blur-3xl" />
-      <div className="absolute right-0 bottom-1/4 h-20 w-20 rounded-full bg-purple-600/20 blur-3xl" />
+      <div className="absolute left-0 top-1/4 h-20 w-20 rounded-full bg-blue-200 blur-3xl" />
+      <div className="absolute right-0 bottom-1/4 h-20 w-20 rounded-full bg-blue-200 blur-3xl" />
       
       {/* Page content */}
       <motion.div
@@ -130,10 +128,10 @@ const Impute = () => {
         transition={{ duration: 0.5 }}
         className="w-full"
       >
-        <h1 className="mb-4 text-center text-3xl font-bold text-white md:text-4xl lg:text-5xl">
+        <h1 className="mb-4 text-center text-3xl font-bold text-slate-800 md:text-4xl lg:text-5xl">
           Data Imputation
         </h1>
-        <p className="mb-12 text-center text-lg text-white/60">
+        <p className="mb-12 text-center text-lg text-slate-600">
           Upload your CSV dataset and let our AI fill in missing data
         </p>
       </motion.div>
@@ -144,10 +142,10 @@ const Impute = () => {
         transition={{ duration: 0.5, delay: 0.2 }}
         className="w-full"
       >
-        <Card className="border border-white/10 bg-white/5 backdrop-blur-lg text-white shadow-lg">
+        <Card className="border border-slate-200 bg-white shadow-lg">
           <CardHeader>
-            <CardTitle className="text-xl text-white">Upload CSV File</CardTitle>
-            <CardDescription className="text-white/60">
+            <CardTitle className="text-xl text-slate-800">Upload CSV File</CardTitle>
+            <CardDescription className="text-slate-500">
               Upload your CSV file with missing values for imputation
             </CardDescription>
           </CardHeader>
@@ -155,7 +153,7 @@ const Impute = () => {
             <div className="flex flex-col items-center">
               <div 
                 onClick={triggerFileInput}
-                className={`mb-6 flex h-40 w-full cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed ${file ? 'border-purple-500' : 'border-white/20'} bg-white/5 p-6 transition-all hover:bg-white/10`}
+                className={`mb-6 flex h-40 w-full cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed ${file ? 'border-blue-500' : 'border-slate-300'} bg-slate-50 p-6 transition-all hover:bg-slate-100`}
               >
                 <input
                   type="file"
@@ -167,17 +165,17 @@ const Impute = () => {
                 
                 {file ? (
                   <div className="flex flex-col items-center">
-                    <FileSpreadsheet className="mb-2 h-10 w-10 text-purple-400" />
-                    <p className="text-center text-white">{file.name}</p>
-                    <p className="text-center text-sm text-white/60">
+                    <FileSpreadsheet className="mb-2 h-10 w-10 text-blue-500" />
+                    <p className="text-center text-slate-700">{file.name}</p>
+                    <p className="text-center text-sm text-slate-500">
                       {(file.size / 1024 / 1024).toFixed(2)} MB
                     </p>
                   </div>
                 ) : (
                   <div className="flex flex-col items-center">
-                    <Upload className="mb-2 h-10 w-10 text-white/60" />
-                    <p className="text-center text-white">Drag and drop your CSV file here</p>
-                    <p className="text-center text-sm text-white/60">
+                    <Upload className="mb-2 h-10 w-10 text-slate-400" />
+                    <p className="text-center text-slate-700">Drag and drop your CSV file here</p>
+                    <p className="text-center text-sm text-slate-500">
                       or click to browse
                     </p>
                   </div>
@@ -187,12 +185,12 @@ const Impute = () => {
               {uploading && (
                 <div className="mb-4 w-full">
                   <div className="mb-1 flex justify-between">
-                    <span className="text-sm text-white/60">Uploading...</span>
-                    <span className="text-sm text-white/60">{uploadProgress}%</span>
+                    <span className="text-sm text-slate-500">Uploading...</span>
+                    <span className="text-sm text-slate-500">{uploadProgress}%</span>
                   </div>
-                  <div className="h-2 w-full overflow-hidden rounded-full bg-white/10">
+                  <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200">
                     <div 
-                      className="h-full rounded-full bg-purple-600 transition-all" 
+                      className="h-full rounded-full bg-blue-600 transition-all" 
                       style={{ width: `${uploadProgress}%` }}
                     />
                   </div>
@@ -200,14 +198,14 @@ const Impute = () => {
               )}
               
               {uploadStatus === 'success' && (
-                <div className="mb-4 flex items-center rounded-lg bg-green-500/20 p-3 text-green-300">
+                <div className="mb-4 flex items-center rounded-lg bg-green-100 p-3 text-green-700">
                   <CheckCircle className="mr-2 h-5 w-5" />
                   <span>File uploaded successfully!</span>
                 </div>
               )}
               
               {uploadStatus === 'error' && (
-                <div className="mb-4 flex items-center rounded-lg bg-red-500/20 p-3 text-red-300">
+                <div className="mb-4 flex items-center rounded-lg bg-red-100 p-3 text-red-700">
                   <AlertCircle className="mr-2 h-5 w-5" />
                   <span>Error uploading file. Please try again.</span>
                 </div>
@@ -215,9 +213,9 @@ const Impute = () => {
 
               {jobId && jobStatus && (
                 <div className={`mb-4 flex items-center rounded-lg p-3 ${
-                  jobStatus === 'processing' ? 'bg-blue-500/20 text-blue-300' :
-                  jobStatus === 'completed' ? 'bg-green-500/20 text-green-300' :
-                  'bg-red-500/20 text-red-300'
+                  jobStatus === 'processing' ? 'bg-blue-100 text-blue-700' :
+                  jobStatus === 'completed' ? 'bg-green-100 text-green-700' :
+                  'bg-red-100 text-red-700'
                 }`}>
                   {jobStatus === 'processing' ? (
                     <Clock className="mr-2 h-5 w-5" />
@@ -238,7 +236,7 @@ const Impute = () => {
           <CardFooter className="flex flex-col space-y-4 sm:flex-row sm:justify-between sm:space-y-0">
             <Button 
               onClick={triggerFileInput}
-              className="w-full border border-white/20 bg-white/5 text-white hover:bg-white/10 sm:w-auto"
+              className="w-full border border-slate-200 bg-white text-slate-700 hover:bg-slate-100 sm:w-auto"
             >
               Choose File
             </Button>
@@ -254,7 +252,7 @@ const Impute = () => {
               <Button 
                 onClick={handleUpload}
                 disabled={!file || uploading || jobStatus === 'processing'}
-                className="w-full bg-purple-600 text-white hover:bg-purple-700 sm:w-auto"
+                className="w-full bg-blue-600 text-white hover:bg-blue-700 sm:w-auto"
               >
                 {uploading ? 'Uploading...' : jobStatus === 'processing' ? 'Processing...' : 'Upload and Process'}
               </Button>
@@ -267,14 +265,14 @@ const Impute = () => {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.5, delay: 0.4 }}
-        className="mt-8 w-full rounded-lg border border-white/10 bg-white/5 backdrop-blur-lg p-6 text-white"
+        className="mt-8 w-full rounded-lg border border-slate-200 bg-white p-6 text-slate-800 shadow"
       >
         <h3 className="mb-3 text-xl font-medium">What happens after upload?</h3>
-        <ul className="ml-5 list-disc space-y-2 text-white/70">
+        <ul className="ml-5 list-disc space-y-2 text-slate-600">
           <li>Your CSV file is securely uploaded to our server</li>
           <li>Our AI analyzes your dataset to identify missing values</li>
           <li>Multiple imputation techniques are applied based on data patterns</li>
-          <li>Processing happens in the background, you'll get a notification when complete</li>
+          <li>Processing happens in the background, you&apos;ll get a notification when complete</li>
           <li>Download the completed dataset with imputed values</li>
         </ul>
       </motion.div>
@@ -302,10 +300,10 @@ const Impute = () => {
         ].map((feature, index) => (
           <div 
             key={index}
-            className="rounded-lg border border-white/10 bg-white/5 backdrop-blur-lg p-4 text-white"
+            className="rounded-lg border border-slate-200 bg-white p-4 text-slate-800 shadow"
           >
             <h3 className="mb-2 text-lg font-medium">{feature.title}</h3>
-            <p className="text-sm text-white/60">{feature.description}</p>
+            <p className="text-sm text-slate-600">{feature.description}</p>
           </div>
         ))}
       </motion.div>

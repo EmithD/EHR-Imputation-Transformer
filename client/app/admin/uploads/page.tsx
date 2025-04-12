@@ -1,10 +1,9 @@
 'use client';
 
-import AdminSideBar from '@/components/admin_sidebar';
-import React, { useEffect, useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import React, { useEffect, useState, useCallback } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Download, Trash2, FileText, Search, Filter, RefreshCw } from 'lucide-react';
+import { Download, Trash2, Search, RefreshCw } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -31,16 +30,17 @@ const UploadsPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const { user, setUser } = useUser();
+  const { user } = useUser();
 
-  const fetchUploads = async (id = user?.id) => {
+  // Wrap fetchUploads in useCallback to memoize it
+  const fetchUploads = useCallback(async (id = user?.id) => {
     if (!id) return;
     
     setIsLoading(true);
     try {
-      const uploadsRaw = await fetch(`http://localhost:3000/api/v1/files/${id}`);
+      const uploadsRaw = await fetch(`${NEST_BASE_URL}/api/v1/files/${id}`);
 
-      console.log("ID: ", id)
+      console.log("ID: ", id);
 
       if (!uploadsRaw.ok) {
         const errorText = await uploadsRaw.text();
@@ -64,18 +64,18 @@ const UploadsPage = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [user?.id]); // Only depend on user?.id, not the entire user object
 
   useEffect(() => {
-    fetchUploads(user?.id);
-  }, []);
+    fetchUploads();
+  }, [fetchUploads]); // Now fetchUploads is stable and won't cause re-renders
   
   const getStatusBadge = (status: FileStatus) => {
     const statusStyles: Record<FileStatus, string> = {
-      completed: 'bg-green-500/20 text-green-400 border-green-500/30',
-      processing: 'bg-blue-500/20 text-blue-400 border-blue-500/30 animate-pulse',
-      failed: 'bg-red-500/20 text-red-400 border-red-500/30',
-      pending: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
+      completed: 'bg-green-100 text-green-700 border-green-300',
+      processing: 'bg-blue-100 text-blue-700 border-blue-300 animate-pulse',
+      failed: 'bg-red-100 text-red-700 border-red-300',
+      pending: 'bg-yellow-100 text-yellow-700 border-yellow-300',
     };
 
     return (
@@ -87,15 +87,19 @@ const UploadsPage = () => {
 
   const handleDelete = async (beid: string, deid: string) => {
     if (uploads) {
-      await fetch (`${FASTAPI_BASE_URL}/api/v1/impute/${beid}`, {
-        method: 'DELETE'
-      });
+      try {
+        await fetch(`${FASTAPI_BASE_URL}/api/v1/impute/${beid}`, {
+          method: 'DELETE'
+        });
 
-      await fetch (`${NEST_BASE_URL}/api/v1/files/${deid}`, {
-        method: 'DELETE'
-      });
+        await fetch(`${NEST_BASE_URL}/api/v1/files/${deid}`, {
+          method: 'DELETE'
+        });
 
-      setUploads(uploads.filter(upload => upload._id !== deid));
+        setUploads(uploads.filter(upload => upload._id !== deid));
+      } catch (error) {
+        console.error("Error deleting file:", error);
+      }
     }
   };
 
@@ -135,13 +139,13 @@ const UploadsPage = () => {
     >
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-white">Uploads</h1>
-          <p className="text-white/60">Manage your uploaded files</p>
+          <h1 className="text-2xl font-bold text-slate-800">Uploads</h1>
+          <p className="text-slate-600">Manage your uploaded files</p>
         </div>
         <Button 
           onClick={handleRefresh} 
           variant="outline" 
-          className="border-white/20 bg-white/5 text-white hover:bg-white/10"
+          className="border-slate-200 bg-white text-slate-700 hover:bg-slate-100"
           disabled={isLoading || !user?.id}
         >
           <RefreshCw size={16} className={`mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
@@ -149,15 +153,15 @@ const UploadsPage = () => {
         </Button>
       </div>
 
-      <Card className="bg-white/5 backdrop-blur-lg border-white/10 text-white shadow-xl mb-6">
+      <Card className="bg-white border-slate-200 shadow-md mb-6">
         <CardHeader className="pb-3">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <CardTitle className="text-xl">Your Files</CardTitle>
+            <CardTitle className="text-xl text-slate-800">Your Files</CardTitle>
             <div className="relative w-full md:w-64">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40" size={16} />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
               <Input
                 placeholder="Search files..."
-                className="pl-9 bg-white/5 border-white/10 text-white placeholder:text-white/40 w-full"
+                className="pl-9 bg-slate-50 border-slate-200 text-slate-700 placeholder:text-slate-400 w-full"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
@@ -168,42 +172,47 @@ const UploadsPage = () => {
           <div className="overflow-x-auto">
             <table className="w-full border-collapse">
               <thead>
-                <tr className="border-b border-white/10">
-
-                  <th className="py-3 px-4 text-left text-white/70 font-medium text-sm">File Identifier</th>
-                  <th className="py-3 px-4 text-left text-white/70 font-medium text-sm">Status</th>
-                  <th className="py-3 px-4 text-left text-white/70 font-medium text-sm">Uploaded</th>
-                  <th className="py-3 px-4 text-right text-white/70 font-medium text-sm">Actions</th>
+                <tr className="border-b border-slate-200">
+                  <th className="py-3 px-4 text-left text-slate-500 font-medium text-sm">File Identifier</th>
+                  <th className="py-3 px-4 text-left text-slate-500 font-medium text-sm">Status</th>
+                  <th className="py-3 px-4 text-left text-slate-500 font-medium text-sm">Uploaded</th>
+                  <th className="py-3 px-4 text-right text-slate-500 font-medium text-sm">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {isLoading ? (
                   <tr>
-                    <td colSpan={6} className="py-8 text-center text-white/60">
+                    <td colSpan={6} className="py-8 text-center text-slate-500">
                       Loading...
+                    </td>
+                  </tr>
+                ) : !user?.id ? (
+                  <tr>
+                    <td colSpan={6} className="py-8 text-center text-slate-500">
+                      User information is loading...
                     </td>
                   </tr>
                 ) : filteredUploads.length > 0 ? (
                   filteredUploads.map((upload, index) => (
                     <tr 
                       key={upload._id} 
-                      className={`border-b border-white/10 hover:bg-white/5 transition-colors ${
-                        index % 2 === 0 ? 'bg-white/[0.02]' : ''
+                      className={`border-b border-slate-200 hover:bg-slate-50 transition-colors ${
+                        index % 2 === 0 ? 'bg-slate-50/50' : ''
                       }`}
                     >
-                      <td className="py-3 px-4 text-sm">
+                      <td className="py-3 px-4 text-sm text-slate-700">
                         <div className="flex items-center">
                           {upload.bEfileId}
                         </div>
                       </td>
                       <td className="py-3 px-4 text-sm">{getStatusBadge(upload.status as FileStatus)}</td>
-                      <td className="py-3 px-4 text-sm text-white/70">{new Date(upload.dateCreated).toLocaleString()}</td>
+                      <td className="py-3 px-4 text-sm text-slate-600">{new Date(upload.dateCreated).toLocaleString()}</td>
                       <td className="py-3 px-4 text-right">
                         <div className="flex items-center justify-end space-x-2">
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8 text-white/70 hover:text-white hover:bg-white/10"
+                            className="h-8 w-8 text-slate-500 hover:text-blue-700 hover:bg-blue-50"
                             onClick={() => handleDownload(upload.bEfileId)}
                             disabled={upload.status === 'processing' || upload.status === 'pending'}
                           >
@@ -212,7 +221,7 @@ const UploadsPage = () => {
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8 text-white/70 hover:text-red-400 hover:bg-red-500/10"
+                            className="h-8 w-8 text-slate-500 hover:text-red-700 hover:bg-red-50"
                             onClick={() => handleDelete(upload.bEfileId, upload._id)}
                           >
                             <Trash2 size={16} />
@@ -223,7 +232,7 @@ const UploadsPage = () => {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={6} className="py-8 text-center text-white/60">
+                    <td colSpan={6} className="py-8 text-center text-slate-500">
                       {searchQuery ? 'No files match your search' : 'No files uploaded yet'}
                     </td>
                   </tr>
@@ -233,13 +242,13 @@ const UploadsPage = () => {
           </div>
           
           {filteredUploads.length > 0 && (
-            <div className="mt-4 flex justify-between items-center text-sm text-white/60">
+            <div className="mt-4 flex justify-between items-center text-sm text-slate-500">
               <div>Showing {filteredUploads.length} of {uploads.length} files</div>
               <div className="flex items-center">
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="text-white/70 hover:text-white hover:bg-white/10"
+                  className="text-slate-500 hover:text-slate-700 hover:bg-slate-100"
                   disabled
                 >
                   Previous
@@ -248,7 +257,7 @@ const UploadsPage = () => {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="text-white/70 hover:text-white hover:bg-white/10"
+                  className="text-slate-500 hover:text-slate-700 hover:bg-slate-100"
                   disabled
                 >
                   Next
