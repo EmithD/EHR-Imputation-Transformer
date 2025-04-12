@@ -8,7 +8,7 @@ import { Download, Trash2, FileText, Search, Filter, RefreshCw } from 'lucide-re
 import { motion } from 'framer-motion';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { IsAuth } from '../IsAuth';
+import { useUser } from '@/app/context/UserContext';
 
 type FileStatus = 'completed' | 'processing' | 'failed' | 'pending';
 
@@ -30,40 +30,18 @@ const UploadsPage = () => {
   const [uploads, setUploads] = useState<UploadFile[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [userId, setUserId] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+  const { user, setUser } = useUser();
 
-  // First check authentication
-  useEffect(() => {
-    const checkAuth = async () => {
-      setIsLoading(true);
-      const authInstance = new IsAuth();
-      const result = await authInstance.isAuthenticated();
-      
-      if (result.auth === false) {
-        window.location.href = '/auth/login';
-        return;
-      } else {
-        console.log("user:", result.userId);
-        setUserId(result.userId);
-        // Only fetch uploads after userId is set
-        fetchUploads(result.userId);
-      }
-      setIsLoading(false);
-    };
-    
-    checkAuth();
-  }, []);
-
-  // Fetch uploads when refreshing
-  const fetchUploads = async (id = userId) => {
+  const fetchUploads = async (id = user?.id) => {
     if (!id) return;
     
     setIsLoading(true);
     try {
       const uploadsRaw = await fetch(`http://localhost:3000/api/v1/files/${id}`);
-      
-      // Check if response is ok before trying to parse JSON
+
+      console.log("ID: ", id)
+
       if (!uploadsRaw.ok) {
         const errorText = await uploadsRaw.text();
         console.error("API error:", errorText);
@@ -87,6 +65,10 @@ const UploadsPage = () => {
       setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchUploads(user?.id);
+  }, []);
   
   const getStatusBadge = (status: FileStatus) => {
     const statusStyles: Record<FileStatus, string> = {
@@ -124,13 +106,12 @@ const UploadsPage = () => {
 
   const handleRefresh = () => {
     setIsRefreshing(true);
-    fetchUploads(); // Fetch the latest data
+    fetchUploads();
     setTimeout(() => {
       setIsRefreshing(false);
     }, 1000);
   };
 
-  // Calculate filtered uploads with null checks
   const filteredUploads = uploads.filter(upload => {
     if (!upload) return false;
     
@@ -146,140 +127,138 @@ const UploadsPage = () => {
   });
 
   return (
-    <AdminSideBar>
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3 }}
-        className="p-4 lg:p-6"
-      >
-        <div className="flex justify-between items-center mb-6">
-          <div>
-            <h1 className="text-2xl font-bold text-white">Uploads</h1>
-            <p className="text-white/60">Manage your uploaded files</p>
-          </div>
-          <Button 
-            onClick={handleRefresh} 
-            variant="outline" 
-            className="border-white/20 bg-white/5 text-white hover:bg-white/10"
-            disabled={isLoading || !userId}
-          >
-            <RefreshCw size={16} className={`mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
-            Refresh
-          </Button>
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+      className="p-4 lg:p-6"
+    >
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-white">Uploads</h1>
+          <p className="text-white/60">Manage your uploaded files</p>
         </div>
+        <Button 
+          onClick={handleRefresh} 
+          variant="outline" 
+          className="border-white/20 bg-white/5 text-white hover:bg-white/10"
+          disabled={isLoading || !user?.id}
+        >
+          <RefreshCw size={16} className={`mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+          Refresh
+        </Button>
+      </div>
 
-        <Card className="bg-white/5 backdrop-blur-lg border-white/10 text-white shadow-xl mb-6">
-          <CardHeader className="pb-3">
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-              <CardTitle className="text-xl">Your Files</CardTitle>
-              <div className="relative w-full md:w-64">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40" size={16} />
-                <Input
-                  placeholder="Search files..."
-                  className="pl-9 bg-white/5 border-white/10 text-white placeholder:text-white/40 w-full"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-              </div>
+      <Card className="bg-white/5 backdrop-blur-lg border-white/10 text-white shadow-xl mb-6">
+        <CardHeader className="pb-3">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <CardTitle className="text-xl">Your Files</CardTitle>
+            <div className="relative w-full md:w-64">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40" size={16} />
+              <Input
+                placeholder="Search files..."
+                className="pl-9 bg-white/5 border-white/10 text-white placeholder:text-white/40 w-full"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
             </div>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full border-collapse">
-                <thead>
-                  <tr className="border-b border-white/10">
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse">
+              <thead>
+                <tr className="border-b border-white/10">
 
-                    <th className="py-3 px-4 text-left text-white/70 font-medium text-sm">File Identifier</th>
-                    <th className="py-3 px-4 text-left text-white/70 font-medium text-sm">Status</th>
-                    <th className="py-3 px-4 text-left text-white/70 font-medium text-sm">Uploaded</th>
-                    <th className="py-3 px-4 text-right text-white/70 font-medium text-sm">Actions</th>
+                  <th className="py-3 px-4 text-left text-white/70 font-medium text-sm">File Identifier</th>
+                  <th className="py-3 px-4 text-left text-white/70 font-medium text-sm">Status</th>
+                  <th className="py-3 px-4 text-left text-white/70 font-medium text-sm">Uploaded</th>
+                  <th className="py-3 px-4 text-right text-white/70 font-medium text-sm">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {isLoading ? (
+                  <tr>
+                    <td colSpan={6} className="py-8 text-center text-white/60">
+                      Loading...
+                    </td>
                   </tr>
-                </thead>
-                <tbody>
-                  {isLoading ? (
-                    <tr>
-                      <td colSpan={6} className="py-8 text-center text-white/60">
-                        Loading...
+                ) : filteredUploads.length > 0 ? (
+                  filteredUploads.map((upload, index) => (
+                    <tr 
+                      key={upload._id} 
+                      className={`border-b border-white/10 hover:bg-white/5 transition-colors ${
+                        index % 2 === 0 ? 'bg-white/[0.02]' : ''
+                      }`}
+                    >
+                      <td className="py-3 px-4 text-sm">
+                        <div className="flex items-center">
+                          {upload.bEfileId}
+                        </div>
+                      </td>
+                      <td className="py-3 px-4 text-sm">{getStatusBadge(upload.status as FileStatus)}</td>
+                      <td className="py-3 px-4 text-sm text-white/70">{new Date(upload.dateCreated).toLocaleString()}</td>
+                      <td className="py-3 px-4 text-right">
+                        <div className="flex items-center justify-end space-x-2">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-white/70 hover:text-white hover:bg-white/10"
+                            onClick={() => handleDownload(upload.bEfileId)}
+                            disabled={upload.status === 'processing' || upload.status === 'pending'}
+                          >
+                            <Download size={16} />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-white/70 hover:text-red-400 hover:bg-red-500/10"
+                            onClick={() => handleDelete(upload.bEfileId, upload._id)}
+                          >
+                            <Trash2 size={16} />
+                          </Button>
+                        </div>
                       </td>
                     </tr>
-                  ) : filteredUploads.length > 0 ? (
-                    filteredUploads.map((upload, index) => (
-                      <tr 
-                        key={upload._id} 
-                        className={`border-b border-white/10 hover:bg-white/5 transition-colors ${
-                          index % 2 === 0 ? 'bg-white/[0.02]' : ''
-                        }`}
-                      >
-                        <td className="py-3 px-4 text-sm">
-                          <div className="flex items-center">
-                            {upload.bEfileId}
-                          </div>
-                        </td>
-                        <td className="py-3 px-4 text-sm">{getStatusBadge(upload.status as FileStatus)}</td>
-                        <td className="py-3 px-4 text-sm text-white/70">{new Date(upload.dateCreated).toLocaleString()}</td>
-                        <td className="py-3 px-4 text-right">
-                          <div className="flex items-center justify-end space-x-2">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-white/70 hover:text-white hover:bg-white/10"
-                              onClick={() => handleDownload(upload.bEfileId)}
-                              disabled={upload.status === 'processing' || upload.status === 'pending'}
-                            >
-                              <Download size={16} />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-white/70 hover:text-red-400 hover:bg-red-500/10"
-                              onClick={() => handleDelete(upload.bEfileId, upload._id)}
-                            >
-                              <Trash2 size={16} />
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan={6} className="py-8 text-center text-white/60">
-                        {searchQuery ? 'No files match your search' : 'No files uploaded yet'}
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-            
-            {filteredUploads.length > 0 && (
-              <div className="mt-4 flex justify-between items-center text-sm text-white/60">
-                <div>Showing {filteredUploads.length} of {uploads.length} files</div>
-                <div className="flex items-center">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-white/70 hover:text-white hover:bg-white/10"
-                    disabled
-                  >
-                    Previous
-                  </Button>
-                  <span className="mx-2">Page 1 of 1</span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-white/70 hover:text-white hover:bg-white/10"
-                    disabled
-                  >
-                    Next
-                  </Button>
-                </div>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={6} className="py-8 text-center text-white/60">
+                      {searchQuery ? 'No files match your search' : 'No files uploaded yet'}
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+          
+          {filteredUploads.length > 0 && (
+            <div className="mt-4 flex justify-between items-center text-sm text-white/60">
+              <div>Showing {filteredUploads.length} of {uploads.length} files</div>
+              <div className="flex items-center">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-white/70 hover:text-white hover:bg-white/10"
+                  disabled
+                >
+                  Previous
+                </Button>
+                <span className="mx-2">Page 1 of 1</span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-white/70 hover:text-white hover:bg-white/10"
+                  disabled
+                >
+                  Next
+                </Button>
               </div>
-            )}
-          </CardContent>
-        </Card>
-      </motion.div>
-    </AdminSideBar>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </motion.div>
   );
 };
 

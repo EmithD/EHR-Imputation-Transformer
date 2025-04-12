@@ -3,11 +3,11 @@ import React from 'react'
 
 const ProcessPage = () => {
   return (
-    <AdminSideBar>
-        <div>
-            
-        </div>
-    </AdminSideBar>
+
+    <div>
+        
+    </div>
+
   )
 }
 

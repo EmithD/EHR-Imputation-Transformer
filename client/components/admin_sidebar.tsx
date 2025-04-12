@@ -1,14 +1,12 @@
 'use client';
 
-import React, { ReactNode, useState, useEffect } from 'react';
+import React, { ReactNode, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { 
   BarChart3, 
   Settings, 
   HelpCircle, 
-  Bell, 
-  Search, 
   Menu, 
   X, 
   LogOut, 
@@ -18,78 +16,15 @@ import {
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import LogoSVG from './logo_svg';
+import { useLogout, useUser } from '@/app/context/UserContext';
 
-export const useUserData = () => {
-  const [userData, setUserData] = useState({
-    userName: '',
-    avatar: '',
-    isLoading: true,
-    isAuthenticated: false
-  });
-
-  useEffect(() => {
-
-    const cachedUserData = sessionStorage.getItem('userData');
-    
-    if (cachedUserData) {
-      setUserData(JSON.parse(cachedUserData));
-      return;
-    }
-    
-    const getUser = async () => {
-      try {
-        const queryParamsString = localStorage.getItem('queryParams');
-        
-        if (!queryParamsString) {
-          console.log("No token found in localStorage");
-          setUserData(prev => ({...prev, isLoading: false}));
-          return;
-        }
-
-        const queryParams = JSON.parse(queryParamsString);
-
-        const res = await fetch('http://localhost:3000/api/v1/auth/google/user', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ token: queryParams.user })
-        });
-        
-        const data = await res.json();
-
-        const newUserData = {
-          userName: data.isAuthenticated ? data.user.displayName : '',
-          avatar: data.isAuthenticated ? data.user.avatarUrl : '',
-          isLoading: false,
-          isAuthenticated: data.isAuthenticated
-        };
-
-        sessionStorage.setItem('userData', JSON.stringify(newUserData));
-        setUserData(newUserData);
-        
-        if (data.isAuthenticated) {
-          console.log('User is authenticated');
-        } else {
-          console.log('User is not authenticated');
-          window.location.href = '/auth/login';
-        }
-      } catch (error) {
-        console.error('Error fetching user data:', error);
-        setUserData(prev => ({...prev, isLoading: false}));
-      }
-    };
-
-    getUser();
-  }, []);
-
-  return userData;
-};
-
-const AdminSideBar = ({ children }: { children: ReactNode }) => {
-  // Use our custom hook
-  const { userName, avatar, isLoading } = useUserData();
+const AdminSideBar = ({ children }: { 
+  children: ReactNode;
+}) => {
   
+  const { user, setUser } = useUser();
+  const { logout } = useLogout();
+
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = usePathname();
@@ -103,32 +38,27 @@ const AdminSideBar = ({ children }: { children: ReactNode }) => {
   };
 
   const handleLogout = () => {
-    // Clear session and local storage
-    sessionStorage.removeItem('userData');
-    localStorage.removeItem('queryParams');
-    // Redirect to login page or home
-    window.location.href = '/';
+    logout();
   };
 
-  // Navbar items
   const navItems = [
     { icon: <Database size={20} />, label: 'Impute', href: '/admin' },
     { icon: <FileText size={20} />, label: 'My Uploads', href: '/admin/uploads' },
-    { icon: <BarChart3 size={20} />, label: 'Pre-Process', href: '/admin/process' },
+    { icon: <BarChart3 size={20} />, label: 'Analytics', href: '/admin/analytics' },
     { icon: <Settings size={20} />, label: 'Settings', href: '/admin/settings' },
     { icon: <HelpCircle size={20} />, label: 'Help', href: '/admin/help' },
   ];
 
   return (
     <div className="flex min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white">
-      {/* Sidebar - Fixed Position */}
+
       <aside 
         className={`fixed top-0 bottom-0 left-0 z-40 flex flex-col bg-black/20 backdrop-blur-xl border-r border-white/10 
                    transition-all duration-300 ease-in-out
                    ${mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'} 
                    ${collapsed ? 'w-20' : 'w-64'}`}
       >
-        {/* Sidebar Header */}
+
         <div className="flex items-center justify-between h-16 px-4 border-b border-white/10">
           <div className="flex items-center">
             <div className="h-9 w-9 rounded-full text-white backdrop-blur-sm">
@@ -150,8 +80,7 @@ const AdminSideBar = ({ children }: { children: ReactNode }) => {
             <X size={20} />
           </button>
         </div>
-        
-        {/* Sidebar Navigation */}
+
         <nav className="flex-1 overflow-y-auto py-4">
           <ul className="space-y-1 px-2">
             {navItems.map((item, index) => {
@@ -176,20 +105,19 @@ const AdminSideBar = ({ children }: { children: ReactNode }) => {
             })}
           </ul>
         </nav>
-        
-        {/* User Profile & Logout */}
+
         <div className="mt-auto border-t border-white/10 p-4">
           {!collapsed && (
             <div className="flex items-center mb-4">
               <Avatar className="h-10 w-10 border border-white/20">
-                <AvatarImage src={avatar} alt="User" />
+                <AvatarImage src={user?.avatar} alt="User" />
                 <AvatarFallback className="bg-purple-700">
-                  {isLoading ? '...' : userName.substring(0, 2) || '😔'}
+                  {'U'}
                 </AvatarFallback>
               </Avatar>
               <div className="ml-3">
                 <div className="font-medium">
-                  {isLoading ? 'Loading...' : userName || 'Guest'}
+                  {user?.name}
                 </div>
               </div>
             </div>
@@ -229,9 +157,9 @@ const AdminSideBar = ({ children }: { children: ReactNode }) => {
           <div className="flex items-center space-x-3">
 
             <Avatar className="h-8 w-8 border border-white/20">
-              <AvatarImage src={avatar} alt="User" />
+              <AvatarImage src={user?.avatar} alt="User" />
               <AvatarFallback className="bg-purple-700">
-                {isLoading ? '...' : userName.substring(0, 2) || 'U'}
+                {'U'}
               </AvatarFallback>
             </Avatar>
           </div>

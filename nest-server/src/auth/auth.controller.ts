@@ -27,7 +27,21 @@ export class AuthController {
 
             const newUser = await this.authService.validateGoogleUser(code);
 
-            return res.redirect(`http://localhost:3001/admin/?user=${newUser.googleAccessToken}`);
+            res.cookie('user_info', JSON.stringify(
+                {
+                    email: newUser.email,
+                    id: newUser._id,
+                    name: newUser.displayName,
+                    avatar: newUser.googleAvatarUrl,
+                }
+            )), {
+                httpOnly: false,
+                secure: false,
+                sameSite: 'lax',
+                expires: new Date(Date.now() + 60 * 60 * 1000)
+            }
+
+            return res.redirect(`http://localhost:3001/admin/`);
 
             
         } catch (error) {
