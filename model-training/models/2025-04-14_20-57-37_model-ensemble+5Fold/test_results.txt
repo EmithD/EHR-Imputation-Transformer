@@ -1,0 +1,11 @@
+Test Results:
+  Overall NRMSE: 0.0583
+  MCAR NRMSE: 0.0555
+  MAR NRMSE: 0.0555
+  MNAR NRMSE: 0.0639
+
+Hybrid Model Results:
+  Overall NRMSE: 0.1739
+  MCAR NRMSE: 0.0576
+  MAR NRMSE: 0.0526
+  MNAR NRMSE: 0.0638

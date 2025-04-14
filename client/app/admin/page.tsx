@@ -269,43 +269,10 @@ const Impute = () => {
       >
         <h3 className="mb-3 text-xl font-medium">What happens after upload?</h3>
         <ul className="ml-5 list-disc space-y-2 text-slate-600">
-          <li>Your CSV file is securely uploaded to our server</li>
-          <li>Our AI analyzes your dataset to identify missing values</li>
-          <li>Multiple imputation techniques are applied based on data patterns</li>
+          <li>Your CSV file is uploaded to our server</li>
           <li>Processing happens in the background, you&apos;ll get a notification when complete</li>
           <li>Download the completed dataset with imputed values</li>
         </ul>
-      </motion.div>
-
-      {/* Features section */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.5, delay: 0.6 }}
-        className="mt-16 grid w-full grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3"
-      >
-        {[
-          {
-            title: "Multiple Techniques",
-            description: "Uses various imputation methods tailored to your data type"
-          },
-          {
-            title: "Fast Processing",
-            description: "Process large datasets in minutes instead of hours"
-          },
-          {
-            title: "High Accuracy",
-            description: "Advanced algorithms for accurate missing value predictions"
-          }
-        ].map((feature, index) => (
-          <div 
-            key={index}
-            className="rounded-lg border border-slate-200 bg-white p-4 text-slate-800 shadow"
-          >
-            <h3 className="mb-2 text-lg font-medium">{feature.title}</h3>
-            <p className="text-sm text-slate-600">{feature.description}</p>
-          </div>
-        ))}
       </motion.div>
     </div>
 
