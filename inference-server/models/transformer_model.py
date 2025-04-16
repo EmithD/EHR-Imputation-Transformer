@@ -27,38 +27,30 @@ class FeatureCorrelationModule(nn.Module):
             Correlation-enhanced features
         """
         batch_size, num_features, d_model = x.size()
-        
-        # Project features for correlation computation
+    
         x_proj = self.correlation_proj(x)
-        
-        # Compute pairwise feature correlations (scaled dot-product)
+
         corr_matrix = torch.bmm(x_proj, x_proj.transpose(1, 2)) / math.sqrt(d_model)
-        
-        # If we have a mask, adjust correlation for missing values
+     
         if mask is not None:
-            # Create attention mask (1 for observed values, 0 for missing)
+      
             obs_mask = 1 - mask.float()
             mask_matrix = torch.bmm(obs_mask.unsqueeze(2), obs_mask.unsqueeze(1))
             
-            # Apply mask to correlation matrix (masked positions get -1e9)
             masked_corr = corr_matrix.masked_fill(mask_matrix == 0, -1e9)
-            
-            # Softmax to get normalized correlation weights
+           
             corr_weights = F.softmax(masked_corr, dim=-1)
         else:
             corr_weights = F.softmax(corr_matrix, dim=-1)
-        
-        # Apply correlation weights to propagate information across features
+
         corr_features = torch.bmm(corr_weights, x)
         
-        # Compute feature-specific gates to control information flow
+
         gates = self.feature_gate(x)
-        
-        # Gate the correlation features and apply residual connection
+
         gated_corr = gates * corr_features
         enhanced_features = x + self.dropout(gated_corr)
-        
-        # Apply layer normalization
+  
         enhanced_features = self.correlation_norm(enhanced_features)
         
         return enhanced_features
@@ -70,30 +62,28 @@ class FeatureValueDependentEncoder(nn.Module):
     """
     def __init__(self, d_model, dropout=0.1):
         super().__init__()
-        # Increase capacity of the value encoder with one more layer
+      
         self.value_encoder = nn.Sequential(
             nn.Linear(d_model, d_model),
             nn.GELU(),
-            nn.Dropout(dropout),  # Add dropout for regularization
+            nn.Dropout(dropout),
             nn.Linear(d_model, d_model),
-            nn.GELU(),  # Add one more non-linearity
-            nn.Linear(d_model, d_model),  # Add one more layer
+            nn.GELU(),  
+            nn.Linear(d_model, d_model),  
             nn.LayerNorm(d_model)
         )
         
-        # Enhance missingness encoder to better capture patterns
+     
         self.missingness_encoder = nn.Sequential(
             nn.Linear(1, d_model // 2),
             nn.GELU(),
-            nn.Dropout(dropout),  # Add dropout for regularization
+            nn.Dropout(dropout),  
             nn.Linear(d_model // 2, d_model),
             nn.LayerNorm(d_model)
         )
-        
-        # Add attention mechanism for better fusion
+
         self.attention = nn.MultiheadAttention(d_model, num_heads=4, dropout=dropout)
-        
-        # Enhanced fusion layer
+
         self.fusion_layer = nn.Sequential(
             nn.Linear(d_model * 2, d_model),
             nn.GELU(),
@@ -111,15 +101,14 @@ class FeatureValueDependentEncoder(nn.Module):
         Returns:
             Features with enhanced MNAR understanding
         """
-        # Encode feature values
+ 
         value_encoding = self.value_encoder(x)
         
-        # If we have a mask, encode missingness patterns
         if mask is not None:
-            # Encode missingness (expanded to match d_model dimension)
+         
             mask_encoding = self.missingness_encoder(mask.float().unsqueeze(-1))
 
-            # Reshape for attention: [seq_len, batch_size, d_model]
+ 
             batch_size, num_features, d_model = value_encoding.size()
             v_enc = value_encoding.transpose(0, 1)
             m_enc = mask_encoding.transpose(0, 1)
@@ -133,7 +122,7 @@ class FeatureValueDependentEncoder(nn.Module):
             combined = torch.cat([value_encoding, mask_encoding], dim=-1)
             enhanced = self.fusion_layer(combined)
         else:
-            # Without mask, just use value encoding
+
             enhanced = value_encoding
             
         return enhanced
@@ -145,7 +134,7 @@ class RelativePositionEncoding(nn.Module):
     """
     def __init__(self, max_seq_len, d_model):
         super().__init__()
-        # Create a learnable embedding for relative positions
+
         self.rel_pos_embedding = nn.Parameter(torch.randn(2 * max_seq_len - 1, d_model))
         self.max_seq_len = max_seq_len
         
@@ -160,12 +149,12 @@ class RelativePositionEncoding(nn.Module):
             Tensor with relative positional information.
         """
         seq_len = x.size(1)
-        # Create position indices matrix
+
         pos_indices = torch.arange(seq_len, device=x.device)
-        # Calculate relative positions: for each position i, calculate its relative distance to each position j
+     
         rel_pos_indices = pos_indices.unsqueeze(1) - pos_indices.unsqueeze(0) + self.max_seq_len - 1
         
-        # Get embeddings for each relative position
+
         rel_pos_encoded = self.rel_pos_embedding[rel_pos_indices]
         
         return rel_pos_encoded
@@ -182,19 +171,16 @@ class MultiHeadAttentionWithRelPos(nn.Module):
         self.num_heads = num_heads
         self.head_dim = d_model // num_heads
         
-        # Linear projections for Q, K, V
         self.q_proj = nn.Linear(d_model, d_model)
         self.k_proj = nn.Linear(d_model, d_model)
         self.v_proj = nn.Linear(d_model, d_model)
         self.out_proj = nn.Linear(d_model, d_model)
         
-        # Relative position encoding
+
         self.rel_pos_encoding = RelativePositionEncoding(max_seq_len, d_model)
-        
-        # Separate linear projection for relative position attention
+
         self.rel_pos_proj = nn.Linear(d_model, d_model)
         
-        # Scaling factor for dot product attention
         self.scale = self.head_dim ** -0.5
         
         self.dropout = nn.Dropout(dropout)
@@ -213,40 +199,31 @@ class MultiHeadAttentionWithRelPos(nn.Module):
         """
         batch_size = query.size(0)
         seq_len = query.size(1)
-        
-        # Linear projections and reshape for multi-head attention
+
         q = self.q_proj(query).view(batch_size, seq_len, self.num_heads, self.head_dim).transpose(1, 2)
         k = self.k_proj(key).view(batch_size, seq_len, self.num_heads, self.head_dim).transpose(1, 2)
         v = self.v_proj(value).view(batch_size, seq_len, self.num_heads, self.head_dim).transpose(1, 2)
-        
-        # Compute content-based attention scores
+
         attn_scores = torch.matmul(q, k.transpose(-2, -1)) * self.scale  # [batch, heads, seq_len, seq_len]
-        
-        # Create relative position bias
-        # We'll use a simpler approach that's more efficient and avoids shape mismatches
+
         rel_bias = torch.zeros((seq_len, seq_len), device=query.device)
         positions = torch.arange(seq_len, device=query.device)
         relative_positions = positions.unsqueeze(1) - positions.unsqueeze(0)
-        
-        # Convert to a simple positional bias (closer = higher attention)
+
         rel_bias = -torch.abs(relative_positions) * 0.1
         
-        # Add the positional bias to the attention scores
-        # We add the same bias for all heads and batches
+ 
         attn_scores = attn_scores + rel_bias.unsqueeze(0).unsqueeze(0)
         
-        # Apply mask if provided
         if key_padding_mask is not None:
-            # Convert mask to attention mask (True = ignore)
+     
             attn_mask = key_padding_mask.unsqueeze(1).unsqueeze(2)
             attn_scores = attn_scores.masked_fill(attn_mask, float('-inf'))
-        
-        # Apply softmax to get attention weights
+
         attn_weights = torch.softmax(attn_scores, dim=-1)
         attn_weights = self.dropout(attn_weights)
-        
-        # Apply attention weights to values
-        output = torch.matmul(attn_weights, v)  # [batch, heads, seq_len, head_dim]
+
+        output = torch.matmul(attn_weights, v)
         output = output.transpose(1, 2).contiguous().view(batch_size, seq_len, self.d_model)
         
         # Final linear projection
@@ -265,23 +242,21 @@ class RelativePositionTransformerLayer(nn.Module):
                  activation="gelu", max_seq_len=1000, norm_first=True):
         super().__init__()
         
-        # Multi-head attention with relative position encoding
+
         self.self_attn = MultiHeadAttentionWithRelPos(
             d_model, nhead, dropout=dropout, max_seq_len=max_seq_len
         )
         
-        # Feedforward network
+
         self.linear1 = nn.Linear(d_model, dim_feedforward)
         self.linear2 = nn.Linear(dim_feedforward, d_model)
-        
-        # Normalization and dropout
+
         self.norm1 = nn.LayerNorm(d_model)
         self.norm2 = nn.LayerNorm(d_model)
         self.dropout = nn.Dropout(dropout)
         self.dropout1 = nn.Dropout(dropout)
         self.dropout2 = nn.Dropout(dropout)
-        
-        # Activation function
+  
         self.activation = getattr(nn.functional, activation)
         self.norm_first = norm_first
         
@@ -374,20 +349,15 @@ class TabularTransformerWithRelPos(nn.Module):
         
         # Column embedding (learnable)
         self.column_embedding = nn.Embedding(num_features, d_model)
-        
-        # Missing value embedding
+   
         self.missing_embedding = nn.Parameter(torch.randn(1, d_model))
-        
-        # Feature correlation module
+
         self.feature_correlation = FeatureCorrelationModule(num_features, d_model, dropout)
-        
-        # Feature-value dependent encoder
+      
         self.feature_value_encoder = FeatureValueDependentEncoder(d_model, dropout)
-        
-        # Layer normalization before transformer
+
         self.norm = nn.LayerNorm(d_model)
-        
-        # Create encoder layer with relative position encoding
+
         encoder_layer = RelativePositionTransformerLayer(
             d_model=d_model,
             nhead=nhead,
@@ -398,10 +368,9 @@ class TabularTransformerWithRelPos(nn.Module):
             norm_first=True
         )
         
-        # Create transformer encoder
+     
         self.transformer_encoder = RelativePositionTransformerEncoder(encoder_layer, num_layers)
         
-        # Output projection
         self.output_projection = nn.Sequential(
             nn.Linear(d_model, d_model),
             nn.LayerNorm(d_model),
@@ -464,14 +433,11 @@ class TabularTransformerWithRelPos(nn.Module):
             # Replace masked values with learned missing embedding
             missing_embed = self.missing_embedding.expand_as(x_embedded)
             x_embedded = torch.where(mask_expanded == 1, missing_embed, x_embedded)
-        
-        # Apply feature correlation module
+
         x_correlated = self.feature_correlation(x_embedded, mask)
-        
-        # Apply feature-value dependent encoder
+
         x_value_aware = self.feature_value_encoder(x_correlated, mask)
-        
-        # Apply layer normalization
+
         x_embedded = self.norm(x_value_aware)
         
         # Generate attention mask if needed
@@ -492,8 +458,7 @@ class EnsembleModel(nn.Module):
     def __init__(self, num_features, config, num_models=3):
         super().__init__()
         self.num_models = num_models
-        
-        # Create multiple base models
+
         self.models = nn.ModuleList([
             TabularTransformerWithRelPos(
                 num_features=num_features,
@@ -508,7 +473,7 @@ class EnsembleModel(nn.Module):
         ])
         
     def forward(self, x, column_indices, mask=None):
-        # Get predictions from all models
+
         all_preds = []
         for model in self.models:
             preds = model(x, column_indices, mask)
