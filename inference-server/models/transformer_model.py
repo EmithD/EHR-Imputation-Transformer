@@ -1,5 +1,142 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
+import math
+
+class FeatureCorrelationModule(nn.Module):
+    """
+    A module that explicitly models feature correlations to better handle MNAR scenarios.
+    """
+    def __init__(self, num_features, d_model, dropout=0.1):
+        super().__init__()
+        self.correlation_proj = nn.Linear(d_model, d_model)
+        self.feature_gate = nn.Sequential(
+            nn.Linear(d_model, d_model),
+            nn.Sigmoid()
+        )
+        self.correlation_norm = nn.LayerNorm(d_model)
+        self.dropout = nn.Dropout(dropout)
+        
+    def forward(self, x, mask=None):
+        """
+        Args:
+            x: Input features [batch_size, num_features, d_model]
+            mask: Missing value mask [batch_size, num_features]
+            
+        Returns:
+            Correlation-enhanced features
+        """
+        batch_size, num_features, d_model = x.size()
+        
+        # Project features for correlation computation
+        x_proj = self.correlation_proj(x)
+        
+        # Compute pairwise feature correlations (scaled dot-product)
+        corr_matrix = torch.bmm(x_proj, x_proj.transpose(1, 2)) / math.sqrt(d_model)
+        
+        # If we have a mask, adjust correlation for missing values
+        if mask is not None:
+            # Create attention mask (1 for observed values, 0 for missing)
+            obs_mask = 1 - mask.float()
+            mask_matrix = torch.bmm(obs_mask.unsqueeze(2), obs_mask.unsqueeze(1))
+            
+            # Apply mask to correlation matrix (masked positions get -1e9)
+            masked_corr = corr_matrix.masked_fill(mask_matrix == 0, -1e9)
+            
+            # Softmax to get normalized correlation weights
+            corr_weights = F.softmax(masked_corr, dim=-1)
+        else:
+            corr_weights = F.softmax(corr_matrix, dim=-1)
+        
+        # Apply correlation weights to propagate information across features
+        corr_features = torch.bmm(corr_weights, x)
+        
+        # Compute feature-specific gates to control information flow
+        gates = self.feature_gate(x)
+        
+        # Gate the correlation features and apply residual connection
+        gated_corr = gates * corr_features
+        enhanced_features = x + self.dropout(gated_corr)
+        
+        # Apply layer normalization
+        enhanced_features = self.correlation_norm(enhanced_features)
+        
+        return enhanced_features
+
+class FeatureValueDependentEncoder(nn.Module):
+    """
+    A module that explicitly models the relationship between feature values and missingness,
+    which is crucial for MNAR scenarios.
+    """
+    def __init__(self, d_model, dropout=0.1):
+        super().__init__()
+        # Increase capacity of the value encoder with one more layer
+        self.value_encoder = nn.Sequential(
+            nn.Linear(d_model, d_model),
+            nn.GELU(),
+            nn.Dropout(dropout),  # Add dropout for regularization
+            nn.Linear(d_model, d_model),
+            nn.GELU(),  # Add one more non-linearity
+            nn.Linear(d_model, d_model),  # Add one more layer
+            nn.LayerNorm(d_model)
+        )
+        
+        # Enhance missingness encoder to better capture patterns
+        self.missingness_encoder = nn.Sequential(
+            nn.Linear(1, d_model // 2),
+            nn.GELU(),
+            nn.Dropout(dropout),  # Add dropout for regularization
+            nn.Linear(d_model // 2, d_model),
+            nn.LayerNorm(d_model)
+        )
+        
+        # Add attention mechanism for better fusion
+        self.attention = nn.MultiheadAttention(d_model, num_heads=4, dropout=dropout)
+        
+        # Enhanced fusion layer
+        self.fusion_layer = nn.Sequential(
+            nn.Linear(d_model * 2, d_model),
+            nn.GELU(),
+            nn.Dropout(dropout),
+            nn.Linear(d_model, d_model),
+            nn.LayerNorm(d_model)
+        )
+        
+    def forward(self, x, mask=None):
+        """
+        Args:
+            x: Input features [batch_size, num_features, d_model]
+            mask: Missing value mask [batch_size, num_features]
+            
+        Returns:
+            Features with enhanced MNAR understanding
+        """
+        # Encode feature values
+        value_encoding = self.value_encoder(x)
+        
+        # If we have a mask, encode missingness patterns
+        if mask is not None:
+            # Encode missingness (expanded to match d_model dimension)
+            mask_encoding = self.missingness_encoder(mask.float().unsqueeze(-1))
+
+            # Reshape for attention: [seq_len, batch_size, d_model]
+            batch_size, num_features, d_model = value_encoding.size()
+            v_enc = value_encoding.transpose(0, 1)
+            m_enc = mask_encoding.transpose(0, 1)
+
+            attn_output, _ = self.attention(m_enc, v_enc, v_enc)
+
+            attn_output = attn_output.transpose(0, 1)
+
+            mask_encoding = mask_encoding + attn_output
+            
+            combined = torch.cat([value_encoding, mask_encoding], dim=-1)
+            enhanced = self.fusion_layer(combined)
+        else:
+            # Without mask, just use value encoding
+            enhanced = value_encoding
+            
+        return enhanced
 
 class RelativePositionEncoding(nn.Module):
     """
@@ -208,7 +345,8 @@ class RelativePositionTransformerEncoder(nn.Module):
     
 class TabularTransformerWithRelPos(nn.Module):
     """
-    Transformer model for tabular data with relative positional encoding.
+    Enhanced transformer model for tabular data imputation with improved
+    MNAR handling through correlation modeling.
     """
     def __init__(self, 
                  num_features, 
@@ -224,7 +362,7 @@ class TabularTransformerWithRelPos(nn.Module):
         self.d_model = d_model
         self.num_features = num_features
         
-        # Enhanced feature value embedding
+        # Feature value embedding
         self.value_embedding = nn.Sequential(
             nn.Linear(1, d_model),
             nn.LayerNorm(d_model),
@@ -234,16 +372,17 @@ class TabularTransformerWithRelPos(nn.Module):
             nn.LayerNorm(d_model)
         )
         
-        # Feature interaction module
-        self.feature_interaction = nn.Sequential(
-            nn.Linear(d_model, d_model),
-            nn.GELU(),
-            nn.Dropout(dropout),
-            nn.Linear(d_model, d_model)
-        )
-        
         # Column embedding (learnable)
         self.column_embedding = nn.Embedding(num_features, d_model)
+        
+        # Missing value embedding
+        self.missing_embedding = nn.Parameter(torch.randn(1, d_model))
+        
+        # Feature correlation module
+        self.feature_correlation = FeatureCorrelationModule(num_features, d_model, dropout)
+        
+        # Feature-value dependent encoder
+        self.feature_value_encoder = FeatureValueDependentEncoder(d_model, dropout)
         
         # Layer normalization before transformer
         self.norm = nn.LayerNorm(d_model)
@@ -262,7 +401,7 @@ class TabularTransformerWithRelPos(nn.Module):
         # Create transformer encoder
         self.transformer_encoder = RelativePositionTransformerEncoder(encoder_layer, num_layers)
         
-        # Enhanced output projection with skip connection
+        # Output projection
         self.output_projection = nn.Sequential(
             nn.Linear(d_model, d_model),
             nn.LayerNorm(d_model),
@@ -277,10 +416,14 @@ class TabularTransformerWithRelPos(nn.Module):
         self._init_weights()
         
     def _init_weights(self):
-        """Initialize weights using Xavier initialization"""
-        for p in self.parameters():
-            if p.dim() > 1:
-                nn.init.xavier_uniform_(p)
+        """Initialize weights using Kaiming initialization for better convergence"""
+        for m in self.modules():
+            if isinstance(m, nn.Linear):
+                nn.init.kaiming_normal_(m.weight, mode='fan_in', nonlinearity='relu')
+                if m.bias is not None:
+                    nn.init.zeros_(m.bias)
+            elif isinstance(m, nn.Embedding):
+                nn.init.normal_(m.weight, mean=0.0, std=0.02)
                 
     def _generate_attention_mask(self, mask):
         """Generate attention mask for transformer"""
@@ -292,7 +435,7 @@ class TabularTransformerWithRelPos(nn.Module):
                 
     def forward(self, x, column_indices, mask=None):
         """
-        Forward pass of the transformer model with relative position encoding.
+        Forward pass with enhanced correlation modeling for MNAR patterns.
         
         Args:
             x: Input tensor [batch_size, num_features]
@@ -314,12 +457,22 @@ class TabularTransformerWithRelPos(nn.Module):
         col_embed = self.column_embedding(column_indices).unsqueeze(0).expand(batch_size, -1, -1)
         x_embedded = x_embedded + col_embed
         
-        # Apply feature interaction
-        x_interacted = self.feature_interaction(x_embedded)
-        x_embedded = x_embedded + x_interacted  # Residual connection
+        # Handle missing values if mask is provided
+        if mask is not None:
+            # Expand mask to match embedding dimensions
+            mask_expanded = mask.unsqueeze(-1).expand_as(x_embedded)
+            # Replace masked values with learned missing embedding
+            missing_embed = self.missing_embedding.expand_as(x_embedded)
+            x_embedded = torch.where(mask_expanded == 1, missing_embed, x_embedded)
+        
+        # Apply feature correlation module
+        x_correlated = self.feature_correlation(x_embedded, mask)
+        
+        # Apply feature-value dependent encoder
+        x_value_aware = self.feature_value_encoder(x_correlated, mask)
         
         # Apply layer normalization
-        x_embedded = self.norm(x_embedded)
+        x_embedded = self.norm(x_value_aware)
         
         # Generate attention mask if needed
         attn_mask = self._generate_attention_mask(mask) if mask is not None else None
@@ -331,3 +484,38 @@ class TabularTransformerWithRelPos(nn.Module):
         output = self.output_projection(x_encoded).squeeze(-1)
         
         return output
+
+class EnsembleModel(nn.Module):
+    """
+    Ensemble of transformer models for improved prediction.
+    """
+    def __init__(self, num_features, config, num_models=3):
+        super().__init__()
+        self.num_models = num_models
+        
+        # Create multiple base models
+        self.models = nn.ModuleList([
+            TabularTransformerWithRelPos(
+                num_features=num_features,
+                d_model=config["d_model"],
+                nhead=config["num_heads"],
+                num_layers=config["num_layers"],
+                dim_feedforward=config["dim_feedforward"],
+                dropout=config["dropout"],
+                activation=config["activation"],
+                max_seq_len=max(2 * num_features, 100)
+            ) for _ in range(num_models)
+        ])
+        
+    def forward(self, x, column_indices, mask=None):
+        # Get predictions from all models
+        all_preds = []
+        for model in self.models:
+            preds = model(x, column_indices, mask)
+            all_preds.append(preds.unsqueeze(0))
+        
+        # Stack and average predictions
+        all_preds = torch.cat(all_preds, dim=0)
+        avg_preds = torch.mean(all_preds, dim=0)
+        
+        return avg_preds

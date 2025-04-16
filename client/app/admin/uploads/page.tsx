@@ -14,7 +14,7 @@ type FileStatus = 'completed' | 'processing' | 'failed' | 'pending';
 interface UploadFile {
   _id: string;
   userId: string;
-  bEfileId: string;
+  beFileId: string;
   status: FileStatus;
   dateCreated: string;
   createdAt: string;
@@ -80,7 +80,7 @@ const UploadsPage = () => {
 
     return (
       <Badge className={`${statusStyles[status]} border px-2 py-0.5 rounded-full text-xs font-medium`}>
-        {status.charAt(0).toUpperCase() + status.slice(1)}
+        {status?.charAt(0).toUpperCase() + status?.slice(1)}
       </Badge>
     );
   };
@@ -119,8 +119,8 @@ const UploadsPage = () => {
   const filteredUploads = uploads.filter(upload => {
     if (!upload) return false;
     
-    const fileIdMatch = upload.bEfileId && typeof upload.bEfileId === 'string' 
-      ? upload.bEfileId.toLowerCase().includes(searchQuery.toLowerCase()) 
+    const fileIdMatch = upload.beFileId && typeof upload.beFileId === 'string' 
+      ? upload.beFileId.toLowerCase().includes(searchQuery.toLowerCase()) 
       : false;
       
     const idMatch = upload._id && typeof upload._id === 'string' 
@@ -202,7 +202,7 @@ const UploadsPage = () => {
                     >
                       <td className="py-3 px-4 text-sm text-slate-700">
                         <div className="flex items-center">
-                          {upload.bEfileId}
+                          {upload.beFileId}
                         </div>
                       </td>
                       <td className="py-3 px-4 text-sm">{getStatusBadge(upload.status as FileStatus)}</td>
@@ -213,7 +213,7 @@ const UploadsPage = () => {
                             variant="ghost"
                             size="icon"
                             className="h-8 w-8 text-slate-500 hover:text-blue-700 hover:bg-blue-50"
-                            onClick={() => handleDownload(upload.bEfileId)}
+                            onClick={() => handleDownload(upload.beFileId)}
                             disabled={upload.status === 'processing' || upload.status === 'pending'}
                           >
                             <Download size={16} />
@@ -222,7 +222,7 @@ const UploadsPage = () => {
                             variant="ghost"
                             size="icon"
                             className="h-8 w-8 text-slate-500 hover:text-red-700 hover:bg-red-50"
-                            onClick={() => handleDelete(upload.bEfileId, upload._id)}
+                            onClick={() => handleDelete(upload.beFileId, upload._id)}
                           >
                             <Trash2 size={16} />
                           </Button>

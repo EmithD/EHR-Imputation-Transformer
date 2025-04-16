@@ -1,0 +1,20 @@
+Experiment started at: 2025-04-16_04-24-33
+Configuration:
+  data_path: ./data/physionet_39_features_only_no_leakage.csv
+  test_size: 0.2
+  val_size: 0.1
+  d_model: 384
+  num_heads: 12
+  num_layers: 6
+  dim_feedforward: 1536
+  dropout: 0.15
+  activation: gelu
+  batch_size: 128
+  learning_rate: 0.0001
+  weight_decay: 0.005
+  num_epochs: 50
+  patience: 10
+  missing_fraction: 0.3
+  warmup_steps_pct: 0.1
+  min_lr_factor: 1000.0
+  save_dir: models

@@ -65,7 +65,7 @@ const Impute = () => {
           },
           body: JSON.stringify({
             userId: user?.id,
-            bEfileId: response.data.job_id,
+            beFileId: response.data.job_id,
             status: response.data.status
           })
         });

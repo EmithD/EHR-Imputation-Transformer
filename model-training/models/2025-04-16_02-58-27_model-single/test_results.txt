@@ -1,0 +1,5 @@
+Test Results:
+  Overall NRMSE: 0.0583
+  MCAR NRMSE: 0.0508
+  MAR NRMSE: 0.0549
+  MNAR NRMSE: 0.0693

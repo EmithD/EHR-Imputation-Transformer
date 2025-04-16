@@ -1,0 +1,25 @@
+Experiment started at: 2025-04-16_00-16-57
+Configuration:
+  data_path: ./data/physionet_39_features_only_no_leakage.csv
+  test_size: 0.2
+  val_size: 0.1
+  d_model: 256
+  num_heads: 8
+  num_layers: 4
+  dim_feedforward: 1024
+  dropout: 0.25
+  activation: gelu
+  batch_size: 32
+  learning_rate: 0.00025
+  weight_decay: 0.04
+  num_epochs: 120
+  patience: 20
+  missing_fraction: 0.3
+  mechanisms_weights: {'MCAR': 0.2, 'MAR': 0.3, 'MNAR': 0.5}
+  accumulation_steps: 8
+  warmup_steps_pct: 0.03
+  min_lr_factor: 50.0
+  beta1: 0.9
+  beta2: 0.999
+  eps: 1e-08
+  save_dir: models

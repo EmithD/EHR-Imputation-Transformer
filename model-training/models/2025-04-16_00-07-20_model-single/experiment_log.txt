@@ -1,0 +1,29 @@
+Experiment started at: 2025-04-16_00-07-20
+Configuration:
+  data_path: ./data/physionet_39_features_only_no_leakage.csv
+  test_size: 0.2
+  val_size: 0.1
+  d_model: 512
+  num_heads: 16
+  num_layers: 8
+  dim_feedforward: 2048
+  dropout: 0.2
+  activation: gelu
+  batch_size: 64
+  learning_rate: 0.0003
+  weight_decay: 0.01
+  num_epochs: 100
+  patience: 15
+  missing_fraction: 0.3
+  warmup_steps_pct: 0.05
+  min_lr_factor: 100.0
+  accumulation_steps: 2
+  save_dir: models
+
+Final Test Results:
+  Overall NRMSE: 0.0797
+  MCAR NRMSE: 0.0603
+  MAR NRMSE: 0.0720
+  MNAR NRMSE: 0.1068
+
+Experiment completed at: 2025-04-16_00-08-42

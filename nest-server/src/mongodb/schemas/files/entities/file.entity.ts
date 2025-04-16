@@ -13,7 +13,7 @@ export class File {
     userId: MongooseSchema.Types.ObjectId;
 
     @Prop({ required: true, unique: true })
-    bEfileId: string;
+    beFileId: string;
 
     @Prop({ required: false })
     status: string;
